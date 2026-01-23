@@ -43,7 +43,7 @@ class UserService(
         return userRepository.findById(id).orElse(null)
     }
 
-    fun findByNick(nick: String): User? {
+    private fun findByNick(nick: String): User? {
         return userRepository.findByNick(nick)
     }
 
