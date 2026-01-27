@@ -7,7 +7,7 @@ services:
     environment:
       - ORACLE_PASSWORD=oracle
       - APP_USER=app_user
-      - APP_USER_PASSWORD=U$ersApi
+      - APP_USER_PASSWORD=UsersApi!
     networks:
       - custom_net
 
