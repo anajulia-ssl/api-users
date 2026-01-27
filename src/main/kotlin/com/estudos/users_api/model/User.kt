@@ -19,8 +19,8 @@ import java.util.UUID
 @Table(name = "users")
 data class User(
     @Id @UuidGenerator
-    @Column(nullable = false)
-    val id: UUID,
+    @Column(nullable = false, updatable = false)
+    val id: UUID? = null,
 
     @NotNull
     @Size(min = 3, max = 255)

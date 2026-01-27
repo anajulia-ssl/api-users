@@ -1,6 +1,8 @@
 package com.estudos.users_api.controller
 
-import com.estudos.users_api.model.User
+import com.estudos.users_api.mapper.UserMapper
+import com.estudos.users_api.dto.UserRequest
+import com.estudos.users_api.dto.UserResponse
 import com.estudos.users_api.service.UserService
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
@@ -18,25 +20,32 @@ class UserController(private val service: UserService) {
 
     //CREATE
     @PostMapping
-    fun create(@RequestBody user: User): User {
-        return service.create(user)
+    fun create(@RequestBody request: UserRequest): UserResponse {
+        val entity = UserMapper.toEntity(request)
+        val saved = service.create(entity)
+        return UserMapper.toResponse(saved)
     }
 
     //READ
     @GetMapping
-    fun findAll(): List<User> {
-        return service.findAll()
+    fun findAll(): List<UserResponse> {
+        return service.findAll().map {
+            UserMapper.toResponse(it)
+        }
     }
 
     @GetMapping("/{id}")
-    fun findById(@PathVariable id: UUID): User? {
-        return service.findById(id)
+    fun findById(@PathVariable id: UUID): UserResponse {
+        val user = service.findById(id)
+        return UserMapper.toResponse(user)
     }
 
     //UPDATE
     @PutMapping("/{id}")
-    fun update(@PathVariable id: UUID, @RequestBody user: User): User? {
-        return service.update(id, user)
+    fun update(@PathVariable id: UUID, @RequestBody request: UserRequest): UserResponse? {
+        val entity = UserMapper.toEntity(request).copy(id = id)
+        val updated = service.update(id, entity)
+        return UserMapper.toResponse(updated)
     }
 
     //DELETE

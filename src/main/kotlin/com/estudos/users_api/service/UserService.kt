@@ -39,8 +39,8 @@ class UserService(
         return userRepository.findAll()
     }
 
-    fun findById(id: UUID): User? {
-        return userRepository.findById(id).orElse(null)
+    fun findById(id: UUID): User {
+        return userRepository.findById(id).orElseThrow { IllegalArgumentException("User not found") }
     }
 
     private fun findByNick(nick: String): User? {
@@ -50,7 +50,7 @@ class UserService(
     // UPDATE
     fun update(id: UUID, updatedUser: User): User {
         val existing = userRepository.findById(id).orElseThrow {
-            IllegalArgumentException("Usuário não encontrado")
+            IllegalArgumentException("User not found")
         }
 
         validate(updatedUser, existing.id)
