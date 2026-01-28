@@ -1,5 +1,8 @@
 package com.estudos.users_api.service
 
+import com.estudos.users_api.exception.InvalidStackException
+import com.estudos.users_api.exception.NickAlreadyExistsException
+import com.estudos.users_api.exception.UserNotFoundException
 import com.estudos.users_api.model.User
 import com.estudos.users_api.repository.UserRepository
 import org.springframework.stereotype.Service
@@ -10,21 +13,25 @@ class UserService(
     private val userRepository: UserRepository
 ) {
     private fun validate(user: User, currentId: UUID? = null) {
-        if (user.nick != null) {
-            val existingUser = userRepository.findByNick(user.nick!!)
+        user.nick?.let { nick ->
+            val existingUser = userRepository.findByNick(nick)
             if (existingUser != null && existingUser.id != currentId) {
-                throw IllegalArgumentException("Nick já existe")
+
+                throw NickAlreadyExistsException(nick)
             }
         }
 
-        if (user.stack.any { it.isBlank() })
-            throw IllegalArgumentException("Stack contém valores nulos ou vazios")
+        if (user.stack.any { it.isBlank() }) {
+            throw InvalidStackException("Stack contains null or empty values.")
+        }
 
-        if (user.stack.any { it.length > 32 })
-            throw IllegalArgumentException("Stack contém valores maiores que o limite de caracteres")
+        if (user.stack.size != user.stack.distinct().size) {
+            throw InvalidStackException("Stack contains duplicate values.")
+        }
 
-        if (user.stack.size != user.stack.distinct().size)
-            throw IllegalArgumentException("Stack contém duplicados")
+        if (user.stack.any { it.length > 32 }) {
+            throw InvalidStackException("Stack contains values longer than 32 characters.")
+        }
     }
 
 
@@ -40,7 +47,9 @@ class UserService(
     }
 
     fun findById(id: UUID): User {
-        return userRepository.findById(id).orElseThrow { IllegalArgumentException("User not found") }
+        return userRepository.findById(id).orElseThrow {
+            UserNotFoundException(id)
+        }
     }
 
     private fun findByNick(nick: String): User? {
@@ -50,17 +59,25 @@ class UserService(
     // UPDATE
     fun update(id: UUID, updatedUser: User): User {
         val existing = userRepository.findById(id).orElseThrow {
-            IllegalArgumentException("User not found")
+            UserNotFoundException(id)
         }
 
         validate(updatedUser, existing.id)
 
-        val userToSave = updatedUser.copy(id = existing.id)
-        return userRepository.save(userToSave)
+        existing.name = updatedUser.name
+        existing.nick = updatedUser.nick
+        existing.birthDate = updatedUser.birthDate
+        existing.stack = updatedUser.stack
+
+        return userRepository.save(existing)
     }
 
     // DELETE
     fun deleteById(id: UUID) {
+        if (!userRepository.existsById(id)) {
+            throw UserNotFoundException(id)
+        }
         userRepository.deleteById(id)
     }
+
 }
