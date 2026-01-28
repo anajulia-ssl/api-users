@@ -3,54 +3,88 @@ package com.estudos.users_api.controller
 import com.estudos.users_api.mapper.UserMapper
 import com.estudos.users_api.dto.UserRequest
 import com.estudos.users_api.dto.UserResponse
+import com.estudos.users_api.exception.NickAlreadyExistsException
+import com.estudos.users_api.exception.UserNotFoundException
+import com.estudos.users_api.exception.InvalidStackException
 import com.estudos.users_api.service.UserService
-import org.springframework.web.bind.annotation.DeleteMapping
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
+import jakarta.validation.Valid
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.*
 import java.util.UUID
 
 @RestController
-@RequestMapping("/users")
+@RequestMapping("/api/users")
 class UserController(private val service: UserService) {
 
-    //CREATE
     @PostMapping
-    fun create(@RequestBody request: UserRequest): UserResponse {
-        val entity = UserMapper.toEntity(request)
-        val saved = service.create(entity)
-        return UserMapper.toResponse(saved)
-    }
-
-    //READ
-    @GetMapping
-    fun findAll(): List<UserResponse> {
-        return service.findAll().map {
-            UserMapper.toResponse(it)
+    fun create(@Valid @RequestBody request: UserRequest): ResponseEntity<Any> {
+        return try {
+            val entity = UserMapper.toEntity(request)
+            val saved = service.create(entity)
+            ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(UserMapper.toResponse(saved))
+        } catch (ex: NickAlreadyExistsException) {
+            ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(mapOf("error" to ex.message))
+        } catch (ex: InvalidStackException) {
+            ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(mapOf("error" to ex.message))
         }
     }
 
+    @GetMapping
+    fun findAll(): ResponseEntity<List<UserResponse>> {
+        val users = service.findAll()
+            .map(UserMapper::toResponse)
+        return ResponseEntity.ok(users)
+    }
+
     @GetMapping("/{id}")
-    fun findById(@PathVariable id: UUID): UserResponse {
-        val user = service.findById(id)
-        return UserMapper.toResponse(user)
+    fun findById(@PathVariable id: UUID): ResponseEntity<Any> {
+        return try {
+            val user = service.findById(id)
+            ResponseEntity.ok(UserMapper.toResponse(user))
+        } catch (ex: UserNotFoundException) {
+            ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to ex.message))
+        }
     }
 
-    //UPDATE
     @PutMapping("/{id}")
-    fun update(@PathVariable id: UUID, @RequestBody request: UserRequest): UserResponse? {
-        val entity = UserMapper.toEntity(request).copy(id = id)
-        val updated = service.update(id, entity)
-        return UserMapper.toResponse(updated)
+    fun update(@PathVariable id: UUID, @Valid @RequestBody request: UserRequest): ResponseEntity<Any> {
+        return try {
+            val entity = UserMapper.toEntity(request)
+            val updated = service.update(id, entity)
+            ResponseEntity.ok(UserMapper.toResponse(updated))
+        } catch (ex: UserNotFoundException) {
+            ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to ex.message))
+        } catch (ex: NickAlreadyExistsException) {
+            ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(mapOf("error" to ex.message))
+        } catch (ex: InvalidStackException) {
+            ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(mapOf("error" to ex.message))
+        }
     }
 
-    //DELETE
     @DeleteMapping("/{id}")
-    fun deleteById(@PathVariable id: UUID){
-        service.deleteById(id)
+    fun delete(@PathVariable id: UUID): ResponseEntity<Any> {
+        return try {
+            service.deleteById(id)
+            ResponseEntity.noContent().build()
+        } catch (ex: UserNotFoundException) {
+            ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(mapOf("error" to ex.message))
+        }
     }
 }
