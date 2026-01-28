@@ -42,7 +42,7 @@ class UserIntegrationTest(
     }
 
     @Test
-    fun `should return 404 when invalid request`() {
+    fun `should return 400 when invalid request`() {
         val request = UserRequest(
             name = "",
             nick = "nick",
