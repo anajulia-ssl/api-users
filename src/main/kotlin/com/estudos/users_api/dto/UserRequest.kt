@@ -1,22 +1,24 @@
 package com.estudos.users_api.dto
 
+import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Past
 import jakarta.validation.constraints.Size
-import org.jetbrains.annotations.NotNull
+import jakarta.validation.constraints.NotNull
 import java.time.LocalDate
 
 data class UserRequest(
-    @NotNull
-    @Size(min = 3, max = 255)
+    @field:NotBlank
+    @field:Size(min = 3, max = 255)
     val name: String,
 
-    @Size(min = 1, max = 255)
+    @field:Size(min = 1, max = 255)
     val nick: String? = null,
 
-    @NotNull
-    @Past
+    @field:NotNull
+    @field:Past
     val birthDate: LocalDate,
 
-    val stack: List<@NotBlank @Size(max = 32) String>
+    @field:Size(min = 1)
+    val stack: List<@Valid @NotBlank @Size(max = 32)String>
 )
