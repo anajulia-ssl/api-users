@@ -31,11 +31,11 @@ class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<Map<String, Any>> {
-        val errors = ex.bindingResult.fieldErrors.associate { it.field to (it.defaultMessage ?: "Invalid value") }
-        return ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(mapOf("errors" to errors))
+    fun handleValidationExceptions(ex: MethodArgumentNotValidException): ResponseEntity<Map<String, Map<String, List<String>>>> {
+        val errors = ex.bindingResult.fieldErrors
+            .groupBy({ it.field }, { it.defaultMessage ?: "Invalid value" })
+
+        return ResponseEntity.badRequest().body(mapOf("errors" to errors))
     }
 
     // fallback genérico

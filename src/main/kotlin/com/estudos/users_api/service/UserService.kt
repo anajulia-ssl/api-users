@@ -20,18 +20,6 @@ class UserService(
                 throw NickAlreadyExistsException(nick)
             }
         }
-
-        if (user.stack.any { it.isBlank() }) {
-            throw InvalidStackException("Stack contains null or empty values.")
-        }
-
-        if (user.stack.size != user.stack.distinct().size) {
-            throw InvalidStackException("Stack contains duplicate values.")
-        }
-
-        if (user.stack.any { it.length > 32 }) {
-            throw InvalidStackException("Stack contains values longer than 32 characters.")
-        }
     }
 
 
