@@ -51,8 +51,9 @@ class GlobalExceptionHandler {
     fun handleGeneric(ex: Exception): ResponseEntity<List<ErrorResponse>> {
         val error = ErrorResponse(
             error = "internal_exception",
-            description = "Unexpected error: ${ex.message}"
+            description = "Unexpected error occurred"
         )
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(listOf(error))
     }
+
 }
