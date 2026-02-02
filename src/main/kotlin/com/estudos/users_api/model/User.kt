@@ -20,18 +20,15 @@ class User(
     val id: UUID? = null,
 
     @Column(nullable = false, length = 255)
-    var name: String,
+    var name: String?,
 
     @Column(nullable = true, length = 255, unique = true)
     var nick: String? = null,
 
     @Column(nullable = false)
-    var birthDate: LocalDate,
+    var birthDate: LocalDate?,
 
     @ElementCollection
-    @CollectionTable( name = "user_stack", joinColumns = [JoinColumn(name = "user_id")] )
-    @Column(name = "stack_value", length = 32, nullable = false)
-    var stack: List<String>
-) {
-
-}
+    @CollectionTable(name = "user_stack", joinColumns = [JoinColumn(name = "user_id")])
+    var stack: List<StackItem>?
+)

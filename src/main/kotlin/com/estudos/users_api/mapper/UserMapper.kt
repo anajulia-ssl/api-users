@@ -1,7 +1,9 @@
 package com.estudos.users_api.mapper
 
+import com.estudos.users_api.dto.StackItemResponse
 import com.estudos.users_api.dto.UserRequest
 import com.estudos.users_api.dto.UserResponse
+import com.estudos.users_api.model.StackItem
 import com.estudos.users_api.model.User
 
 object UserMapper {
@@ -10,7 +12,7 @@ object UserMapper {
             name = request.name,
             nick = request.nick,
             birthDate = request.birthDate,
-            stack = request.stack
+            stack = request.stack?.map { StackItem(it.name, it.skillLevel) }
         )
 
     fun toResponse(user: User): UserResponse =
@@ -19,6 +21,6 @@ object UserMapper {
             name = user.name,
             nick = user.nick,
             birthDate = user.birthDate,
-            stack = user.stack
+            stack = user.stack?.map { StackItemResponse(it.name, it.skillLevel) }
         )
 }
