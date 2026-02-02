@@ -1,6 +1,6 @@
 package com.estudos.users_api.service
 
-import com.estudos.users_api.exception.InvalidStackException
+import com.estudos.users_api.dto.StackItemResponse
 import com.estudos.users_api.exception.NickAlreadyExistsException
 import com.estudos.users_api.exception.UserNotFoundException
 import com.estudos.users_api.model.User
@@ -39,6 +39,15 @@ class UserService(
             UserNotFoundException(id)
         }
     }
+
+    fun getUserStacks(userId: UUID): List<StackItemResponse>? {
+        val user = userRepository.findById(userId).orElseThrow {
+            UserNotFoundException(userId)
+        }
+
+        return user.stack?.map { StackItemResponse(it.name, it.skillLevel) }
+    }
+
 
     private fun findByNick(nick: String): User? {
         return userRepository.findByNick(nick)
