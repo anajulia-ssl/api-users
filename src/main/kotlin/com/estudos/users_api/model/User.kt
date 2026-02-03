@@ -1,5 +1,7 @@
 package com.estudos.users_api.model
 
+import com.estudos.users_api.dto.StackItemResponse
+import com.estudos.users_api.dto.UserResponse
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
@@ -32,3 +34,14 @@ class User(
     @CollectionTable(name = "user_stack", joinColumns = [JoinColumn(name = "user_id")])
     var stack: List<StackItem>?
 )
+
+fun User.toResponse(): UserResponse =
+    UserResponse(
+        id = this.id.toString(),
+        name = this.name,
+        nick = this.nick,
+        birthDate = this.birthDate,
+        stack = this.stack?.map {
+            StackItemResponse(it.name, it.skillLevel)
+        }
+    )

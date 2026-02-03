@@ -1,5 +1,7 @@
 package com.estudos.users_api.dto
 
+import com.estudos.users_api.model.StackItem
+import com.estudos.users_api.model.User
 import com.estudos.users_api.validation.annotation.UniqueStack
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -28,3 +30,13 @@ data class UserRequest(
     @field:Valid
     val stack: List<StackItemRequest>?
 )
+
+fun UserRequest.toEntity(): User =
+    User(
+        name = this.name,
+        nick = this.nick,
+        birthDate = this.birthDate,
+        stack = this.stack?.map {
+            StackItem(it.name, it.skillLevel)
+        }
+    )
