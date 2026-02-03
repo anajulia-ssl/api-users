@@ -16,13 +16,13 @@ class UserService(
 ) {
     private fun validate(user: User, currentId: UUID? = null) {
         user.nick?.let { nick ->
-            val existingUser = userRepository.findByNick(nick)
-            if (existingUser != null && existingUser.id != currentId) {
-
+            val existingUser = userRepository.findByNickExcludingId(nick, currentId)
+            if (existingUser != null) {
                 throw NickAlreadyExistsException(nick)
             }
         }
     }
+
 
     // CREATE
     fun create(user: User): User {
