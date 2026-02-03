@@ -1,11 +1,13 @@
 package com.estudos.users_api.controller
 
+import com.estudos.users_api.dto.ResultSet
 import com.estudos.users_api.dto.StackItemResponse
 import com.estudos.users_api.mapper.UserMapper
 import com.estudos.users_api.dto.UserRequest
 import com.estudos.users_api.dto.UserResponse
 import com.estudos.users_api.service.UserService
 import jakarta.validation.Valid
+import org.springframework.data.domain.Sort
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -25,10 +27,22 @@ class UserController(private val service: UserService) {
     }
 
     @GetMapping
-    fun findAll(): ResponseEntity<List<UserResponse>> {
-        val users = service.findAll().map(UserMapper::toResponse)
+    fun findAll(
+        @RequestParam(defaultValue = "0") offset: Int,
+        @RequestParam(defaultValue = "20") limit: Int,
+        @RequestParam(defaultValue = "name,asc") sort: List<String>
+    ): ResponseEntity<ResultSet<UserResponse>> {
+        val orders = sort.map {
+            val parts = it.split(":")
+            Sort.Order(Sort.Direction.fromString(parts[1]), parts[0])
+        }
+        val sortObj = Sort.by(orders)
 
-        return ResponseEntity.ok(users)
+        val users = service.findAll(offset, limit, sortObj).map(UserMapper::toResponse)
+        val total = service.count()
+
+        val resultSet = ResultSet(total, offset, limit, users)
+        return ResponseEntity.ok(resultSet)
     }
 
     @GetMapping("/{id}")
@@ -38,6 +52,7 @@ class UserController(private val service: UserService) {
         return ResponseEntity.ok(UserMapper.toResponse(user))
     }
 
+    @GetMapping("/{userId}/stacks")
     fun getUserStacks(@PathVariable userId: UUID): ResponseEntity<List<StackItemResponse>> {
         val stacks = service.getUserStacks(userId)
         return if (stacks == null) {
@@ -46,7 +61,6 @@ class UserController(private val service: UserService) {
             ResponseEntity.ok(stacks)
         }
     }
-
 
     @PutMapping("/{id}")
     fun update(@PathVariable id: UUID, @Valid @RequestBody request: UserRequest): ResponseEntity<UserResponse> {

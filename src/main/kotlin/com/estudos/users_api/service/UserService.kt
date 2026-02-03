@@ -5,6 +5,8 @@ import com.estudos.users_api.exception.NickAlreadyExistsException
 import com.estudos.users_api.exception.UserNotFoundException
 import com.estudos.users_api.model.User
 import com.estudos.users_api.repository.UserRepository
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -22,7 +24,6 @@ class UserService(
         }
     }
 
-
     // CREATE
     fun create(user: User): User {
         validate(user)
@@ -30,8 +31,9 @@ class UserService(
     }
 
     // READ
-    fun findAll(): List<User> {
-        return userRepository.findAll()
+    fun findAll(offset: Int, limit: Int, sort: Sort): List<User> {
+        val pageable = PageRequest.of(offset / limit, limit, sort)
+        return userRepository.findAll(pageable).content
     }
 
     fun findById(id: UUID): User {
@@ -49,8 +51,8 @@ class UserService(
     }
 
 
-    private fun findByNick(nick: String): User? {
-        return userRepository.findByNick(nick)
+    fun count(): Long {
+        return userRepository.count()
     }
 
     // UPDATE
