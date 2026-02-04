@@ -1,10 +1,11 @@
 package com.estudos.users_api.controller
 
-import com.estudos.users_api.dto.ResultSet
 import com.estudos.users_api.dto.StackItemResponse
 import com.estudos.users_api.dto.UserRequest
 import com.estudos.users_api.dto.UserResponse
 import com.estudos.users_api.dto.toEntity
+import com.estudos.users_api.exception.InvalidPaginationException
+import com.estudos.users_api.exception.InvalidSortException
 import com.estudos.users_api.model.toResponse
 import com.estudos.users_api.service.UserService
 import jakarta.validation.Valid
@@ -27,23 +28,44 @@ class UserController(private val service: UserService) {
         return ResponseEntity.status(HttpStatus.CREATED).body(saved.toResponse())
     }
 
+
     @GetMapping
     fun findAll(
         @RequestParam(defaultValue = "0") offset: Int,
-        @RequestParam(defaultValue = "20") limit: Int,
-        @RequestParam(defaultValue = "name:asc") sort: List<String>
-    ): ResponseEntity<ResultSet<UserResponse>> {
-        val orders = sort.map {
-            val parts = it.split(":")
-            Sort.Order(Sort.Direction.fromString(parts[1]), parts[0])
+        @RequestParam(defaultValue = "10") limit: Int,
+        @RequestParam(defaultValue = "name:asc") sort: String
+    ): ResponseEntity<List<UserResponse>> {
+
+        val sortableFields = listOf("name", "birthDate", "nick")
+
+        if (offset < 0 || limit <= 0) {
+            throw InvalidPaginationException("offset must be >= 0 and limit > 0\")")
         }
-        val sortObj = Sort.by(orders)
 
-        val users = service.findAll(offset, limit, sortObj).map { it.toResponse() }
-        val total = service.count()
+        val sortOrders = sort.split(",").map { part ->
+            val parts = part.split(":")
+            if (parts.size != 2) {
+                throw InvalidSortException("expected format: field:direction")
+            }
 
-        val resultSet = ResultSet(total, offset, limit, users)
-        return ResponseEntity.ok(resultSet)
+            val field = parts[0]
+            val direction = parts[1]
+
+            if (!sortableFields.contains(field)) {
+                throw InvalidSortException("field $field  is not sortable")
+            }
+
+            if (direction !in listOf("asc", "desc")) {
+                throw InvalidSortException("invalid direction: $direction")
+            }
+
+            if (direction == "asc") Sort.Order.asc(field) else Sort.Order.desc(field)
+        }
+
+        val sortObj = Sort.by(sortOrders)
+        val users = service.findAll(offset, limit, sortObj)
+
+        return ResponseEntity.ok(users.map { it.toResponse() })
     }
 
 

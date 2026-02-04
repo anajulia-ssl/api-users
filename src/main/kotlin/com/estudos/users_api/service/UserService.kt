@@ -32,7 +32,8 @@ class UserService(
 
     // READ
     fun findAll(offset: Int, limit: Int, sort: Sort): List<User> {
-        val pageable = PageRequest.of(offset / limit, limit, sort)
+        val page = if (limit > 0) offset / limit else 0
+        val pageable = PageRequest.of(page, limit, sort)
         return userRepository.findAll(pageable).content
     }
 
