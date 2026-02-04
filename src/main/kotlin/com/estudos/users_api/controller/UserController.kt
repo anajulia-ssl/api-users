@@ -38,26 +38,24 @@ class UserController(private val service: UserService) {
 
         val sortableFields = listOf("name", "birthDate", "nick")
 
-        if (offset < 0 || limit <= 0) {
-            throw InvalidPaginationException("offset must be >= 0 and limit > 0\")")
-        }
+        if (offset < 0 || limit <= 0)
+            throw InvalidPaginationException("offset must be >= 0 and limit > 0")
+
 
         val sortOrders = sort.split(",").map { part ->
             val parts = part.split(":")
-            if (parts.size != 2) {
+            if (parts.size != 2)
                 throw InvalidSortException("expected format: field:direction")
-            }
+
 
             val field = parts[0]
             val direction = parts[1]
 
-            if (!sortableFields.contains(field)) {
+            if (!sortableFields.contains(field))
                 throw InvalidSortException("field $field  is not sortable")
-            }
 
-            if (direction !in listOf("asc", "desc")) {
+            if (direction !in listOf("asc", "desc"))
                 throw InvalidSortException("invalid direction: $direction")
-            }
 
             if (direction == "asc") Sort.Order.asc(field) else Sort.Order.desc(field)
         }
