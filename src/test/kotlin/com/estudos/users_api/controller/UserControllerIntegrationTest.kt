@@ -10,7 +10,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.MethodSource
-import org.junit.jupiter.params.provider.ValueSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -25,7 +24,7 @@ import java.util.*
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-class UserIntegrationTest(
+class UserControllerIntegrationTest(
     @Autowired val mockMvc: MockMvc,
     @Autowired val objectMapper: ObjectMapper
 ) {
@@ -119,7 +118,7 @@ class UserIntegrationTest(
         }
 
         @ParameterizedTest
-        @MethodSource("com.estudos.users_api.controller.UserIntegrationTest#invalidCreateRequests")
+        @MethodSource("com.estudos.users_api.controller.UserControllerIntegrationTest#invalidCreateRequests")
         fun `should return 400 with error response when invalid create request`(
             request: UserRequest,
             expectedDetail: String
@@ -136,6 +135,41 @@ class UserIntegrationTest(
                 .andExpect(jsonPath("$.details").value(org.hamcrest.Matchers.hasItem(expectedDetail)))
         }
 
+        @ParameterizedTest
+        @CsvSource("1", "10")
+        fun `should accept stack skill level at limits`(skill: Int) {
+            val request = UserRequest(
+                name = "Boundary",
+                nick = "boundary$skill",
+                birthDate = LocalDate.of(1990,1,1),
+                stack = listOf(StackItemRequest("Java", skill))
+            )
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request))
+            )
+                .andExpect(status().isCreated)
+                .andExpect(jsonPath("$.stack[0].skill_level").value(skill))
+        }
+
+        @Test
+        fun `should reject duplicate stack items case-insensitive`() {
+            val request = UserRequest(
+                name = "Case",
+                nick = "caseStack",
+                birthDate = LocalDate.of(1990,1,1),
+                stack = listOf(StackItemRequest("Java",5), StackItemRequest("java",6))
+            )
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request))
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$.error").value("validation_exception"))
+                .andExpect(jsonPath("$.details", Matchers.hasItem("stack cannot contain duplicate values")))
+        }
     }
 
     @Nested
@@ -233,6 +267,22 @@ class UserIntegrationTest(
                 .andExpect(jsonPath("$.details[0]").isNotEmpty)
         }
 
+        @Test
+        fun `should sort users by name asc`() {
+            val r1 = UserRequest("Bruno", "b1", LocalDate.of(1990,1,1), listOf(StackItemRequest("Java",5)))
+            val r2 = UserRequest("Ana", "a1", LocalDate.of(1990,1,1), listOf(StackItemRequest("Java",5)))
+
+            mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(r1)))
+                .andExpect(status().isCreated)
+
+            mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(r2)))
+                .andExpect(status().isCreated)
+
+            mockMvc.perform(get("/api/users?offset=0&limit=10&sort=name:asc"))
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$[0].name").value("Ana"))
+                .andExpect(jsonPath("$[1].name").value("Bruno"))
+        }
     }
 
     @Nested
@@ -328,8 +378,21 @@ class UserIntegrationTest(
                 .andExpect(jsonPath("$.details[0]").value("nick 'nick2' already exists"))
         }
 
+        @Test
+        fun `should update nick to null when allowed`() {
+            val create = UserRequest("User", "nickx", LocalDate.of(1990,1,1), listOf(StackItemRequest("Java",5)))
+            val result = mockMvc.perform(post("/api/users").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(create)))
+                .andReturn()
+            val id = objectMapper.readTree(result.response.contentAsString)["id"].asText()
+
+            val update = UserRequest("User", null, LocalDate.of(1990,1,1), listOf(StackItemRequest("Java",5)))
+            mockMvc.perform(put("/api/users/$id").contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(update)))
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.nick").doesNotExist())
+        }
+
         @ParameterizedTest
-        @MethodSource("com.estudos.users_api.controller.UserIntegrationTest#invalidCreateRequests")
+        @MethodSource("com.estudos.users_api.controller.UserControllerIntegrationTest#invalidCreateRequests")
         fun `should return 400 when invalid update request`(
             request: UserRequest,
             expectedDetail: String
@@ -461,10 +524,6 @@ class UserIntegrationTest(
             Arguments.of(
                 UserRequest("A".repeat(256), "nick", LocalDate.of(1990,1,1), listOf(StackItemRequest("Java",5))),
                 "name size must be between 3 and 255"
-            ),
-            Arguments.of(
-                UserRequest("Ana", " ", LocalDate.of(1990,1,1), listOf(StackItemRequest("Java",5))),
-                "nick must not be blank"
             ),
             Arguments.of(
                 UserRequest("Ana", "", LocalDate.of(1990,1,1), listOf(StackItemRequest("Java",5))),
