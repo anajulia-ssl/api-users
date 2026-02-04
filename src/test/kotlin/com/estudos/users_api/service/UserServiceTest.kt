@@ -21,7 +21,7 @@ class UserServiceTest {
 
     @Test
     fun `should create user when nick is unique`() {
-        val user = User(id = UUID.randomUUID(), name = "Lucas", nick = "lucas01", birthDate = LocalDate.of(1992, 3, 15), stack = emptyList())
+        val user = User(id = UUID.randomUUID(), name = "Test", nick = "test", birthDate = LocalDate.of(1992, 3, 15), stack = emptyList())
         `when`(userRepository.findByNickExcludingId(user.nick!!, null)).thenReturn(null)
         `when`(userRepository.save(user)).thenReturn(user)
 
@@ -33,7 +33,7 @@ class UserServiceTest {
 
     @Test
     fun `should throw NickAlreadyExistsException when nick already exists`() {
-        val user = User(id = UUID.randomUUID(), name = "Mariana", nick = "mari22", birthDate = LocalDate.of(1995, 7, 20), stack = emptyList())
+        val user = User(id = UUID.randomUUID(), name = "Test", nick = "test", birthDate = LocalDate.of(1995, 7, 20), stack = emptyList())
         `when`(userRepository.findByNickExcludingId(user.nick!!, null)).thenReturn(user)
 
         assertThrows<NickAlreadyExistsException> {
@@ -43,8 +43,8 @@ class UserServiceTest {
 
     @Test
     fun `should return list of users with pagination`() {
-        val user1 = User(id = UUID.randomUUID(), name = "Pedro", nick = "pedro77", birthDate = LocalDate.of(1990, 1, 1), stack = emptyList())
-        val user2 = User(id = UUID.randomUUID(), name = "Clara", nick = "clara88", birthDate = LocalDate.of(1993, 5, 10), stack = emptyList())
+        val user1 = User(id = UUID.randomUUID(), name = "Test 1", nick = "test1", birthDate = LocalDate.of(1990, 1, 1), stack = emptyList())
+        val user2 = User(id = UUID.randomUUID(), name = "Test 2", nick = "test2", birthDate = LocalDate.of(1993, 5, 10), stack = emptyList())
 
         val pageable = PageRequest.of(0, 2, Sort.by("name").ascending())
         val page = org.springframework.data.domain.PageImpl(listOf(user1, user2), pageable, 2)
@@ -54,8 +54,8 @@ class UserServiceTest {
         val result = userService.findAll(offset = 0, limit = 2, sort = Sort.by("name").ascending())
 
         assertEquals(2, result.size)
-        assertEquals("Pedro", result[0].name)
-        assertEquals("Clara", result[1].name)
+        assertEquals("Test 1", result[0].name)
+        assertEquals("Test 2", result[1].name)
     }
 
     @Test
@@ -72,7 +72,7 @@ class UserServiceTest {
 
     @Test
     fun `should find user by id`() {
-        val user = User(id = UUID.randomUUID(), name = "Felipe", nick = "felipe99", birthDate = LocalDate.of(1988, 11, 30), stack = emptyList())
+        val user = User(id = UUID.randomUUID(), name = "Test", nick = "test", birthDate = LocalDate.of(1988, 11, 30), stack = emptyList())
         `when`(userRepository.findById(user.id!!)).thenReturn(Optional.of(user))
 
         val result = userService.findById(user.id!!)
@@ -92,8 +92,8 @@ class UserServiceTest {
 
     @Test
     fun `should update user when exists`() {
-        val existing = User(id = UUID.randomUUID(), name = "Beatriz", nick = "bia123", birthDate = LocalDate.of(1991, 4, 12), stack = emptyList())
-        val updated = User(id = UUID.randomUUID(), name = "Beatriz Silva", nick = "bia123", birthDate = LocalDate.of(1991, 4, 12), stack = emptyList())
+        val existing = User(id = UUID.randomUUID(), name = "Test", nick = "test", birthDate = LocalDate.of(1991, 4, 12), stack = emptyList())
+        val updated = User(id = UUID.randomUUID(), name = "Test updated", nick = "test", birthDate = LocalDate.of(1991, 4, 12), stack = emptyList())
 
         `when`(userRepository.findById(existing.id!!)).thenReturn(Optional.of(existing))
         `when`(userRepository.findByNickExcludingId(updated.nick!!, existing.id)).thenReturn(null)
@@ -101,14 +101,14 @@ class UserServiceTest {
 
         val result = userService.update(existing.id!!, updated)
 
-        assertEquals("Beatriz Silva", result.name)
+        assertEquals("Test updated", result.name)
         verify(userRepository).save(existing)
     }
 
     @Test
     fun `should throw UserNotFoundException when updating non-existing user`() {
         val id = UUID.randomUUID()
-        val updated = User(id = UUID.randomUUID(), name = "Rafael", nick = "rafa01", birthDate = LocalDate.of(1996, 9, 5), stack = emptyList())
+        val updated = User(id = UUID.randomUUID(), name = "Test", nick = "test", birthDate = LocalDate.of(1996, 9, 5), stack = emptyList())
 
         `when`(userRepository.findById(id)).thenReturn(Optional.empty())
 
@@ -142,8 +142,8 @@ class UserServiceTest {
         val userId = UUID.randomUUID()
         val user = User(
             id = userId,
-            name = "João",
-            nick = "joao321",
+            name = "Test",
+            nick = "test",
             birthDate = LocalDate.of(1994, 6, 6),
             stack = listOf(
                 com.estudos.users_api.model.StackItem("Kotlin", 5),
