@@ -37,7 +37,7 @@ class User(
 
 fun User.toResponse(): UserResponse =
     UserResponse(
-        id = this.id.toString(),
+        id = this.id,
         name = this.name,
         nick = this.nick,
         birthDate = this.birthDate,
