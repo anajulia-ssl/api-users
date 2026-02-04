@@ -17,6 +17,7 @@ data class UserRequest(
     @field:Size(min = 3, max = 255, message = "name size must be between 3 and 255")
     val name: String?,
 
+    @field:NotBlank(message = "nick must not be blank")
     @field:Size(min = 1, max = 255, message = "nick size must be between 1 and 255")
     val nick: String? = null,
 
