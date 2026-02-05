@@ -1,8 +1,11 @@
 package com.estudos.users_api.service
 
-import com.estudos.users_api.dto.StackItemResponse
+import com.estudos.users_api.dto.StackResponse
+import com.estudos.users_api.exception.InvalidPaginationException
+import com.estudos.users_api.exception.InvalidSortException
 import com.estudos.users_api.exception.NickAlreadyExistsException
 import com.estudos.users_api.exception.UserNotFoundException
+import com.estudos.users_api.model.Stack
 import com.estudos.users_api.model.User
 import com.estudos.users_api.repository.UserRepository
 import org.springframework.data.domain.PageRequest
@@ -14,6 +17,7 @@ import java.util.UUID
 class UserService(
     private val userRepository: UserRepository
 ) {
+
     private fun validate(user: User, currentId: UUID? = null) {
         user.nick?.let { nick ->
             val existingUser = userRepository.findByNickExcludingId(nick, currentId)
@@ -23,7 +27,6 @@ class UserService(
         }
     }
 
-
     // CREATE
     fun create(user: User): User {
         validate(user)
@@ -31,11 +34,33 @@ class UserService(
     }
 
     // READ
-    fun findAll(offset: Int, limit: Int, sort: Sort): List<User> {
+    fun findAll(offset: Int, limit: Int, sort: String): List<User> {
+        if (offset < 0 || limit <= 0) {
+            throw InvalidPaginationException("offset must be >= 0 and limit > 0")
+        }
+
+        val sortableFields = listOf("name", "birth_date", "nick")
+
+        val sortOrders = sort.split(",").map { part ->
+            val parts = part.split(":")
+            if (parts.size != 2) throw InvalidSortException("expected format: field:direction")
+
+            val field = parts[0]
+            val direction = parts[1]
+
+            if (!sortableFields.contains(field)) throw InvalidSortException("field $field is not sortable")
+            if (direction !in listOf("asc", "desc")) throw InvalidSortException("invalid direction: $direction")
+
+            if (direction == "asc") Sort.Order.asc(field) else Sort.Order.desc(field)
+        }
+
+        val sortObj = Sort.by(sortOrders)
         val page = if (limit > 0) offset / limit else 0
-        val pageable = PageRequest.of(page, limit, sort)
+        val pageable = PageRequest.of(page, limit, sortObj)
+
         return userRepository.findAll(pageable).content
     }
+
 
     fun findById(id: UUID): User {
         return userRepository.findById(id).orElseThrow {
@@ -43,17 +68,12 @@ class UserService(
         }
     }
 
-    fun getUserStacks(userId: UUID): List<StackItemResponse>? {
+    fun getUserStacks(userId: UUID): List<StackResponse> {
         val user = userRepository.findById(userId).orElseThrow {
             UserNotFoundException(userId)
         }
 
-        return user.stack?.map { StackItemResponse(it.name, it.skillLevel) }
-    }
-
-
-    fun count(): Long {
-        return userRepository.count()
+        return user.stack.map { StackResponse(id = it.id, name = it.name, level = it.level) }
     }
 
     // UPDATE
@@ -67,7 +87,18 @@ class UserService(
         existing.name = updatedUser.name
         existing.nick = updatedUser.nick
         existing.birthDate = updatedUser.birthDate
-        existing.stack = updatedUser.stack
+
+        existing.stack.clear()
+        updatedUser.stack.forEach { stack ->
+            existing.stack.add(
+                Stack(
+                    id = stack.id,
+                    name = stack.name,
+                    level = stack.level,
+                    user = existing
+                )
+            )
+        }
 
         return userRepository.save(existing)
     }
@@ -79,5 +110,4 @@ class UserService(
         }
         userRepository.deleteById(id)
     }
-
 }

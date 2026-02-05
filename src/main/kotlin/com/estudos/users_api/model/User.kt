@@ -1,13 +1,12 @@
 package com.estudos.users_api.model
 
-import com.estudos.users_api.dto.StackItemResponse
+import com.estudos.users_api.dto.StackResponse
 import com.estudos.users_api.dto.UserResponse
-import jakarta.persistence.CollectionTable
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
-import jakarta.persistence.ElementCollection
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
-import jakarta.persistence.JoinColumn
+import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import org.hibernate.annotations.UuidGenerator
 import java.time.LocalDate
@@ -22,17 +21,16 @@ class User(
     val id: UUID? = null,
 
     @Column(nullable = false, length = 255)
-    var name: String?,
+    var name: String,
 
     @Column(nullable = true, length = 255, unique = true)
-    var nick: String? = null,
+    var nick: String?  = null,
 
-    @Column(nullable = false)
-    var birthDate: LocalDate?,
+    @Column(name = "birth_date", nullable = false)
+    var birthDate: LocalDate,
 
-    @ElementCollection
-    @CollectionTable(name = "user_stack", joinColumns = [JoinColumn(name = "user_id")])
-    var stack: List<StackItem>?
+    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
+    var stack: MutableList<Stack> = mutableListOf()
 )
 
 fun User.toResponse(): UserResponse =
@@ -41,7 +39,7 @@ fun User.toResponse(): UserResponse =
         name = this.name,
         nick = this.nick,
         birthDate = this.birthDate,
-        stack = this.stack?.map {
-            StackItemResponse(it.name, it.skillLevel)
+        stack = this.stack.map {
+            StackResponse(id = it.id, name = it.name, level = it.level)
         }
     )
