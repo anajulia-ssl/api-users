@@ -2,6 +2,7 @@ package com.estudos.users_api.exception
 
 import com.estudos.users_api.dto.ErrorResponse
 import jakarta.validation.ConstraintViolationException
+import org.slf4j.LoggerFactory
 import org.springframework.beans.TypeMismatchException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -16,6 +17,9 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+
+    private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
+
     // EXCEÇÕES DE NEGÓCIO
     @ExceptionHandler(UserNotFoundException::class)
     fun userNotFound(ex: UserNotFoundException): ResponseEntity<List<ErrorResponse>> {
@@ -47,6 +51,7 @@ class GlobalExceptionHandler {
     fun invalidJson(ex: HttpMessageNotReadableException): ResponseEntity<List<ErrorResponse>> {
 
         val message = ex.cause?.message ?: ex.message ?: ""
+        log.warn("Invalid JSON: {}", message)
 
         // campo null em propriedade não-nula
         if (
@@ -57,7 +62,7 @@ class GlobalExceptionHandler {
                 listOf(
                     ErrorResponse(
                         "parameter_exception",
-                        "Existe um campo obrigatório que não pode ser nulo."
+                        "There is a required field that cannot be null"
                     )
                 )
             )
@@ -69,7 +74,7 @@ class GlobalExceptionHandler {
                 listOf(
                     ErrorResponse(
                         "parameter_exception",
-                        "Existe um campo com tipo inválido no corpo da requisição."
+                        "There is a field with an invalid type in the request body"
                     )
                 )
             )
@@ -81,7 +86,7 @@ class GlobalExceptionHandler {
                 listOf(
                     ErrorResponse(
                         "parameter_exception",
-                        "O corpo da requisição está malformado."
+                        "Request body is malformed"
                     )
                 )
             )
@@ -92,7 +97,7 @@ class GlobalExceptionHandler {
             listOf(
                 ErrorResponse(
                     "parameter_exception",
-                    "Não foi possível processar o corpo da requisição."
+                    "Request body could not be processed"
                 )
             )
         )
@@ -186,6 +191,7 @@ class GlobalExceptionHandler {
     // GENÉRICO
     @ExceptionHandler(Exception::class)
     fun genericError(ex: Exception): ResponseEntity<List<ErrorResponse>> {
+        log.error("Unexpected error", ex)
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
             listOf(
                 ErrorResponse(
