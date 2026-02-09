@@ -3,7 +3,6 @@ package com.estudos.users_api.dto
 import com.estudos.users_api.model.User
 import com.estudos.users_api.validation.annotation.UniqueStack
 import jakarta.validation.Valid
-import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Past
 import jakarta.validation.constraints.Size
@@ -20,7 +19,8 @@ data class UserRequest(
     @field:Past(message = "birth date must be a past date")
     val birthDate: LocalDate,
 
-    @field:Size(min = 1, message = "stack must contain at least one element")
+    @field:Size(min = 1, message = "stack must contain at least 1 element")
+    @field:Size(max = 100, message = "stack must contain a maximum of 100 elements")
     @field:UniqueStack
     @field:Valid
     val stack: List<StackRequest>
