@@ -1,83 +1,198 @@
 package com.estudos.users_api.exception
 
 import com.estudos.users_api.dto.ErrorResponse
+import jakarta.validation.ConstraintViolationException
+import org.springframework.beans.TypeMismatchException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.HttpMediaTypeNotSupportedException
+import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
-
-    @ExceptionHandler(InvalidPaginationException::class)
-    fun handlePagination(ex: InvalidPaginationException): ResponseEntity<ErrorResponse> {
-        val error = ErrorResponse(
-            error = "invalid_pagination",
-            description = "Invalid pagination parameters",
-            details = listOf(ex.message ?: "")
-        )
-        return ResponseEntity.badRequest().body(error)
-    }
-
-    @ExceptionHandler(InvalidSortException::class)
-    fun handleSort(ex: InvalidSortException): ResponseEntity<ErrorResponse> {
-        val error = ErrorResponse(
-            error = "invalid_sort",
-            description = "Invalid sorting parameters",
-            details = listOf(ex.message ?: "")
-        )
-        return ResponseEntity.badRequest().body(error)
-    }
-
+    // EXCEÇÕES DE NEGÓCIO
     @ExceptionHandler(UserNotFoundException::class)
-    fun handleUserNotFound(ex: UserNotFoundException): ResponseEntity<ErrorResponse> {
-        val error = ErrorResponse(
-            error = "not_found_exception",
-            description = "User not found",
-            details = listOf(ex.message ?: "")
+    fun userNotFound(ex: UserNotFoundException): ResponseEntity<List<ErrorResponse>> {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+            listOf(ErrorResponse("not_found_exception", ex.message!!))
         )
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error)
     }
 
     @ExceptionHandler(NickAlreadyExistsException::class)
-    fun handleNickAlreadyExists(ex: NickAlreadyExistsException): ResponseEntity<ErrorResponse> {
-        val error = ErrorResponse(
-            error = "conflict_exception",
-            description = "Nick already exists",
-            details = listOf(ex.message ?: "")
+    fun nickAlreadyExists(ex: NickAlreadyExistsException): ResponseEntity<List<ErrorResponse>> {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+            listOf(ErrorResponse("conflict_exception", ex.message!!))
         )
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(error)
     }
 
-    @ExceptionHandler(InvalidStackException::class)
-    fun handleInvalidStack(ex: InvalidStackException): ResponseEntity<ErrorResponse> {
-        val error = ErrorResponse(
-            error = "business_exception",
-            description = "Invalid stack",
-            details = listOf(ex.message ?: "")
+    @ExceptionHandler(
+        InvalidPaginationException::class,
+        InvalidSortException::class,
+        InvalidStackException::class
+    )
+    fun businessError(ex: RuntimeException): ResponseEntity<List<ErrorResponse>> {
+        return ResponseEntity.badRequest().body(
+            listOf(ErrorResponse("parameter_exception", ex.message!!))
         )
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error)
     }
 
+    // JSON / BODY INVÁLIDO
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun invalidJson(ex: HttpMessageNotReadableException): ResponseEntity<List<ErrorResponse>> {
+
+        val message = ex.cause?.message ?: ex.message ?: ""
+
+        // campo null em propriedade não-nula
+        if (
+            message.contains("non-null", true) ||
+            message.contains("Cannot map `null` into type", true)
+        ) {
+            return ResponseEntity.badRequest().body(
+                listOf(
+                    ErrorResponse(
+                        "parameter_exception",
+                        "Existe um campo obrigatório que não pode ser nulo."
+                    )
+                )
+            )
+        }
+
+        // tipo inválido
+        if (message.contains("Cannot deserialize value of type", true)) {
+            return ResponseEntity.badRequest().body(
+                listOf(
+                    ErrorResponse(
+                        "parameter_exception",
+                        "Existe um campo com tipo inválido no corpo da requisição."
+                    )
+                )
+            )
+        }
+
+        // json malformado
+        if (message.contains("JsonParseException", true)) {
+            return ResponseEntity.badRequest().body(
+                listOf(
+                    ErrorResponse(
+                        "parameter_exception",
+                        "O corpo da requisição está malformado."
+                    )
+                )
+            )
+        }
+
+        // fallback
+        return ResponseEntity.badRequest().body(
+            listOf(
+                ErrorResponse(
+                    "parameter_exception",
+                    "Não foi possível processar o corpo da requisição."
+                )
+            )
+        )
+    }
+
+    // @Valid (BODY)
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleValidationExceptions(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
-        val details = ex.bindingResult.fieldErrors.map { it.defaultMessage ?: "validation error" }
-        val error = ErrorResponse(
-            error = "validation_exception",
-            description = "Invalid request",
-            details = details
-        )
-        return ResponseEntity.badRequest().body(error)
+    fun validationError(ex: MethodArgumentNotValidException): ResponseEntity<List<ErrorResponse>> {
+        val errors = ex.bindingResult.fieldErrors.map {
+            ErrorResponse(
+                "validation_exception",
+                "${it.field}: ${it.defaultMessage}"
+            )
+        }
+        return ResponseEntity.badRequest().body(errors)
     }
 
-    @ExceptionHandler(Exception::class)
-    fun handleGeneric(ex: Exception): ResponseEntity<ErrorResponse> {
-        val error = ErrorResponse(
-            error = "internal_exception",
-            description = "Unexpected error occurred",
-            details = listOf(ex.message ?: "")
+    // QUERY / PATH
+    @ExceptionHandler(ConstraintViolationException::class)
+    fun constraintViolation(ex: ConstraintViolationException): ResponseEntity<List<ErrorResponse>> {
+        val errors = ex.constraintViolations.map {
+            ErrorResponse(
+                "validation_exception",
+                "${it.propertyPath}: ${it.message}"
+            )
+        }
+        return ResponseEntity.badRequest().body(errors)
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException::class)
+    fun missingParameter(ex: MissingServletRequestParameterException): ResponseEntity<List<ErrorResponse>> {
+        return ResponseEntity.badRequest().body(
+            listOf(
+                ErrorResponse(
+                    "parameter_exception",
+                    "Missing required parameter '${ex.parameterName}'"
+                )
+            )
         )
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error)
+    }
+
+    @ExceptionHandler(
+        MethodArgumentTypeMismatchException::class,
+        TypeMismatchException::class
+    )
+    fun typeMismatch(ex: Exception): ResponseEntity<List<ErrorResponse>> {
+
+        val name =
+            if (ex is MethodArgumentTypeMismatchException) ex.name else "parameter"
+
+        val type =
+            if (ex is MethodArgumentTypeMismatchException)
+                ex.requiredType?.simpleName ?: "type"
+            else "type"
+
+        return ResponseEntity.badRequest().body(
+            listOf(
+                ErrorResponse(
+                    "parameter_exception",
+                    "Parameter '$name' must be of type $type"
+                )
+            )
+        )
+    }
+
+    // MÉTODO / CONTENT TYPE
+    @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
+    fun methodNotAllowed(): ResponseEntity<List<ErrorResponse>> {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(
+            listOf(
+                ErrorResponse(
+                    "method_not_allowed",
+                    "HTTP method not supported"
+                )
+            )
+        )
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
+    fun mediaTypeNotSupported(): ResponseEntity<List<ErrorResponse>> {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(
+            listOf(
+                ErrorResponse(
+                    "unsupported_media_type",
+                    "Content-Type not supported"
+                )
+            )
+        )
+    }
+
+    // GENÉRICO
+    @ExceptionHandler(Exception::class)
+    fun genericError(ex: Exception): ResponseEntity<List<ErrorResponse>> {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+            listOf(
+                ErrorResponse(
+                    "internal_exception",
+                    "Unexpected error occurred"
+                )
+            )
+        )
     }
 }
