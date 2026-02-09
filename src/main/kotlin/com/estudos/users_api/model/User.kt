@@ -1,5 +1,6 @@
 package com.estudos.users_api.model
 
+import com.estudos.users_api.annotation.Sortable
 import com.estudos.users_api.dto.StackResponse
 import com.estudos.users_api.dto.UserResponse
 import jakarta.persistence.CascadeType
@@ -21,12 +22,15 @@ class User(
     val id: UUID? = null,
 
     @Column(nullable = false, length = 255)
+    @Sortable
     var name: String,
 
     @Column(nullable = true, length = 255, unique = true)
+    @Sortable
     var nick: String?  = null,
 
     @Column(name = "birth_date", nullable = false)
+    @Sortable(external = "birth_date")
     var birthDate: LocalDate,
 
     @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)

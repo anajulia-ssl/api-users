@@ -1,15 +1,13 @@
 package com.estudos.users_api.service
 
 import com.estudos.users_api.dto.StackResponse
-import com.estudos.users_api.exception.InvalidPaginationException
-import com.estudos.users_api.exception.InvalidSortException
 import com.estudos.users_api.exception.NickAlreadyExistsException
 import com.estudos.users_api.exception.UserNotFoundException
 import com.estudos.users_api.model.Stack
 import com.estudos.users_api.model.User
 import com.estudos.users_api.repository.UserRepository
-import org.springframework.data.domain.PageRequest
-import org.springframework.data.domain.Sort
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -34,33 +32,9 @@ class UserService(
     }
 
     // READ
-    fun findAll(offset: Int, limit: Int, sort: String): List<User> {
-        if (offset < 0 || limit <= 0) {
-            throw InvalidPaginationException("offset must be >= 0 and limit > 0")
-        }
-
-        val sortableFields = listOf("name", "birth_date", "nick")
-
-        val sortOrders = sort.split(",").map { part ->
-            val parts = part.split(":")
-            if (parts.size != 2) throw InvalidSortException("expected format: field:direction")
-
-            val field = parts[0]
-            val direction = parts[1]
-
-            if (!sortableFields.contains(field)) throw InvalidSortException("field $field is not sortable")
-            if (direction !in listOf("asc", "desc")) throw InvalidSortException("invalid direction: $direction")
-
-            if (direction == "asc") Sort.Order.asc(field) else Sort.Order.desc(field)
-        }
-
-        val sortObj = Sort.by(sortOrders)
-        val page = if (limit > 0) offset / limit else 0
-        val pageable = PageRequest.of(page, limit, sortObj)
-
-        return userRepository.findAll(pageable).content
+    fun findAll(pageable: Pageable): Page<User> {
+        return userRepository.findAll(pageable)
     }
-
 
     fun findById(id: UUID): User {
         return userRepository.findById(id).orElseThrow {

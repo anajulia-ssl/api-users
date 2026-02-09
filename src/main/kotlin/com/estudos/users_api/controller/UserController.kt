@@ -1,9 +1,13 @@
 package com.estudos.users_api.controller
 
+import com.estudos.users_api.dto.PageQuery
+import com.estudos.users_api.dto.pagination.Paginator
 import com.estudos.users_api.dto.StackResponse
 import com.estudos.users_api.dto.UserRequest
 import com.estudos.users_api.dto.UserResponse
 import com.estudos.users_api.dto.toEntity
+import com.estudos.users_api.dto.toPageable
+import com.estudos.users_api.model.User
 import com.estudos.users_api.model.toResponse
 import com.estudos.users_api.service.UserService
 import jakarta.validation.Valid
@@ -24,14 +28,13 @@ class UserController(private val service: UserService) {
     }
 
     @GetMapping
-    fun findAll(
-        @RequestParam(defaultValue = "0") offset: Int,
-        @RequestParam(defaultValue = "10") limit: Int,
-        @RequestParam(defaultValue = "name:asc") sort: String
-    ): ResponseEntity<List<UserResponse>> {
-        val users = service.findAll(offset, limit, sort)
-        return ResponseEntity.ok(users.map { it.toResponse() })
-    }
+    fun findAll(@Valid query: PageQuery) =
+        Paginator.build(
+            query = query,
+            page = service.findAll(query.toPageable(User::class)),
+            mapper = { it.toResponse() }
+        )
+
 
     @GetMapping("/{id}")
     fun findById(@PathVariable id: UUID): ResponseEntity<UserResponse> {
