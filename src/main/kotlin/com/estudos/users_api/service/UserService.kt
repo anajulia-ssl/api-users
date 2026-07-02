@@ -9,6 +9,7 @@ import com.estudos.users_api.repository.UserRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 @Service
@@ -26,6 +27,7 @@ class UserService(
     }
 
     // CREATE
+    @Transactional
     fun create(user: User): User {
         validate(user)
         return userRepository.save(user)
@@ -51,6 +53,7 @@ class UserService(
     }
 
     // UPDATE
+    @Transactional
     fun update(id: UUID, updatedUser: User): User {
         val existing = userRepository.findById(id).orElseThrow {
             UserNotFoundException(id)
@@ -78,6 +81,7 @@ class UserService(
     }
 
     // DELETE
+    @Transactional
     fun deleteById(id: UUID) {
         if (!userRepository.existsById(id)) {
             throw UserNotFoundException(id)
