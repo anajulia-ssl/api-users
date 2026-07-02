@@ -24,25 +24,28 @@ class GlobalExceptionHandler {
     @ExceptionHandler(UserNotFoundException::class)
     fun userNotFound(ex: UserNotFoundException): ResponseEntity<List<ErrorResponse>> {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
-            listOf(ErrorResponse("not_found_exception", ex.message!!))
+            listOf(ErrorResponse("not_found_exception", ex.message ?: "User not found"))
         )
     }
 
     @ExceptionHandler(NickAlreadyExistsException::class)
     fun nickAlreadyExists(ex: NickAlreadyExistsException): ResponseEntity<List<ErrorResponse>> {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
-            listOf(ErrorResponse("conflict_exception", ex.message!!))
+            listOf(ErrorResponse("conflict_exception", ex.message ?: "Nick already exists"))
         )
     }
 
-    @ExceptionHandler(
-        InvalidPaginationException::class,
-        InvalidSortException::class,
-        InvalidStackException::class
-    )
-    fun businessError(ex: RuntimeException): ResponseEntity<List<ErrorResponse>> {
+    @ExceptionHandler(InvalidPaginationException::class)
+    fun invalidPagination(ex: InvalidPaginationException): ResponseEntity<List<ErrorResponse>> {
         return ResponseEntity.badRequest().body(
-            listOf(ErrorResponse("parameter_exception", ex.message!!))
+            listOf(ErrorResponse("invalid_pagination", ex.message ?: "Invalid pagination parameters"))
+        )
+    }
+
+    @ExceptionHandler(InvalidSortException::class)
+    fun invalidSort(ex: InvalidSortException): ResponseEntity<List<ErrorResponse>> {
+        return ResponseEntity.badRequest().body(
+            listOf(ErrorResponse("invalid_sort", ex.message ?: "Invalid sorting parameters"))
         )
     }
 
@@ -109,7 +112,7 @@ class GlobalExceptionHandler {
         val errors = ex.bindingResult.fieldErrors.map {
             ErrorResponse(
                 "validation_exception",
-                "${it.field}: ${it.defaultMessage}"
+                it.defaultMessage ?: "Invalid value"
             )
         }
         return ResponseEntity.badRequest().body(errors)
@@ -121,7 +124,7 @@ class GlobalExceptionHandler {
         val errors = ex.constraintViolations.map {
             ErrorResponse(
                 "validation_exception",
-                "${it.propertyPath}: ${it.message}"
+                it.message
             )
         }
         return ResponseEntity.badRequest().body(errors)
