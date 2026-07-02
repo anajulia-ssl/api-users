@@ -1,4 +1,4 @@
-package com.estudos.users_api.enum
+package com.estudos.users_api.enums
 
 import org.springframework.data.domain.Sort
 

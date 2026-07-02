@@ -1,6 +1,5 @@
 package com.estudos.users_api.dto.pagination
 
-import com.estudos.users_api.dto.PageQuery
 import org.springframework.data.domain.Page
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 import org.springframework.web.util.UriComponentsBuilder
@@ -34,8 +33,6 @@ object Paginator {
             links = links
         )
     }
-
-    /* ------------------ helpers ------------------- */
 
     private fun createLinks(offset: Int, limit: Int, total: Long): PageLinks {
         val base = ServletUriComponentsBuilder.fromCurrentRequest()

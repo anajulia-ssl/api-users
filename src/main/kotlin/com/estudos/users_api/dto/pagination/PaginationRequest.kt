@@ -1,8 +1,9 @@
-package com.estudos.users_api.dto
+package com.estudos.users_api.dto.pagination
 
 import com.estudos.users_api.annotation.Sortable
-import com.estudos.users_api.enum.SortDirection
-import jakarta.validation.constraints.Min
+import com.estudos.users_api.enums.SortDirection
+import com.estudos.users_api.exception.InvalidPaginationException
+import com.estudos.users_api.exception.InvalidSortException
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
