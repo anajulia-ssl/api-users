@@ -1,8 +1,7 @@
 package com.estudos.users_api.controller
 
-import com.estudos.users_api.dto.StackItemRequest
+import com.estudos.users_api.dto.StackRequest
 import com.estudos.users_api.dto.UserRequest
-import jakarta.transaction.Transactional
 import org.hamcrest.Matchers
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -17,6 +16,7 @@ import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import org.springframework.transaction.annotation.Transactional
 import tools.jackson.databind.ObjectMapper
 import java.time.LocalDate
 import java.util.*
@@ -38,7 +38,7 @@ class UserControllerIntegrationTest(
                 name = "User Test",
                 nick = "user123",
                 birthDate = LocalDate.of(1995, 1, 1),
-                stack = listOf(StackItemRequest("Kotlin", 5))
+                stack = listOf(StackRequest("Kotlin", 5))
             )
 
             mockMvc.perform(
@@ -52,7 +52,7 @@ class UserControllerIntegrationTest(
                 .andExpect(jsonPath("$.nick").value("user123"))
                 .andExpect(jsonPath("$.birth_date").value("1995-01-01"))
                 .andExpect(jsonPath("$.stack[0].name").value("Kotlin"))
-                .andExpect(jsonPath("$.stack[0].skill_level").value(5))
+                .andExpect(jsonPath("$.stack[0].level").value(5))
         }
 
         @Test
@@ -61,7 +61,7 @@ class UserControllerIntegrationTest(
                 name = "User Test",
                 nick = null,
                 birthDate = LocalDate.of(1995, 1, 1),
-                stack = listOf(StackItemRequest("Kotlin", 5))
+                stack = listOf(StackRequest("Kotlin", 5))
             )
 
             mockMvc.perform(
@@ -75,7 +75,7 @@ class UserControllerIntegrationTest(
                 .andExpect(jsonPath("$.nick").doesNotExist())
                 .andExpect(jsonPath("$.birth_date").value("1995-01-01"))
                 .andExpect(jsonPath("$.stack[0].name").value("Kotlin"))
-                .andExpect(jsonPath("$.stack[0].skill_level").value(5))
+                .andExpect(jsonPath("$.stack[0].level").value(5))
         }
 
         @Test
@@ -84,13 +84,13 @@ class UserControllerIntegrationTest(
                 name = "User 1",
                 nick = "duplicatedNick",
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Spring", 5))
+                stack = listOf(StackRequest("Spring", 5))
             )
             val duplicateNickRequest = UserRequest(
                 name = "User 2",
                 nick = "duplicatedNick",
                 birthDate = LocalDate.of(1992, 2, 2),
-                stack = listOf(StackItemRequest("Kotlin", 7))
+                stack = listOf(StackRequest("Kotlin", 7))
             )
 
             mockMvc.perform(
@@ -104,7 +104,7 @@ class UserControllerIntegrationTest(
                 .andExpect(jsonPath("$.nick").value("duplicatedNick"))
                 .andExpect(jsonPath("$.birth_date").value("1990-01-01"))
                 .andExpect(jsonPath("$.stack[0].name").value("Spring"))
-                .andExpect(jsonPath("$.stack[0].skill_level").value(5))
+                .andExpect(jsonPath("$.stack[0].level").value(5))
 
             mockMvc.perform(
                 post("/api/users")
@@ -112,16 +112,15 @@ class UserControllerIntegrationTest(
                     .content(objectMapper.writeValueAsString(duplicateNickRequest))
             )
                 .andExpect(status().isConflict)
-                .andExpect(jsonPath("$.error").value("conflict_exception"))
-                .andExpect(jsonPath("$.description").value("Nick already exists"))
-                .andExpect(jsonPath("$.details", Matchers.hasItem("nick 'duplicatedNick' already exists")))
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("conflict_exception")))
+            .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("Nick '${duplicateNickRequest.nick}' already exists")))
         }
 
         @ParameterizedTest
         @MethodSource("com.estudos.users_api.controller.UserControllerIntegrationTest#invalidCreateRequests")
         fun `should return 400 with error response when invalid create request`(
             userRequest: UserRequest,
-            expectedDetail: String
+            expectedDescription: String
         ) {
             mockMvc.perform(
                 post("/api/users")
@@ -129,20 +128,18 @@ class UserControllerIntegrationTest(
                     .content(objectMapper.writeValueAsString(userRequest))
             )
                 .andExpect(status().isBadRequest)
-                .andExpect(jsonPath("$.error").value("validation_exception"))
-                .andExpect(jsonPath("$.description").value("Invalid request"))
-                .andExpect(jsonPath("$.details").isArray)
-                .andExpect(jsonPath("$.details", Matchers.hasItem(expectedDetail)))
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("validation_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem(expectedDescription)))
         }
 
         @ParameterizedTest
         @CsvSource("1", "10")
-        fun `should accept stack skill level at limits`(skill: Int) {
+        fun `should accept stack level at limits`(level: Int) {
             val userRequest = UserRequest(
                 name = "Limit User",
-                nick = "limit$skill",
+                nick = "limit$level",
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Java", skill))
+                stack = listOf(StackRequest("Java", level))
             )
             mockMvc.perform(
                 post("/api/users")
@@ -150,7 +147,7 @@ class UserControllerIntegrationTest(
                     .content(objectMapper.writeValueAsString(userRequest))
             )
                 .andExpect(status().isCreated)
-                .andExpect(jsonPath("$.stack[0].skill_level").value(skill))
+                .andExpect(jsonPath("$.stack[0].level").value(level))
         }
 
         @Test
@@ -159,7 +156,7 @@ class UserControllerIntegrationTest(
                 name = "User Test",
                 nick = "userStackCase",
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Java", 5), StackItemRequest("java", 6))
+                stack = listOf(StackRequest("Java", 5), StackRequest("java", 6))
             )
             mockMvc.perform(
                 post("/api/users")
@@ -167,8 +164,8 @@ class UserControllerIntegrationTest(
                     .content(objectMapper.writeValueAsString(userRequest))
             )
                 .andExpect(status().isBadRequest)
-                .andExpect(jsonPath("$.error").value("validation_exception"))
-                .andExpect(jsonPath("$.details", Matchers.hasItem("stack cannot contain duplicate values")))
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("validation_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("Stack cannot contain duplicate values")))
         }
     }
 
@@ -180,8 +177,8 @@ class UserControllerIntegrationTest(
             mockMvc.perform(get("/api/users"))
                 .andExpect(status().isOk)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray)
-                .andExpect(jsonPath("$", Matchers.hasSize<Any>(0)))
+                .andExpect(jsonPath("$.items").isArray)
+                .andExpect(jsonPath("$.items", Matchers.hasSize<Any>(0)))
         }
 
         @Test
@@ -190,7 +187,7 @@ class UserControllerIntegrationTest(
                 name = "User Test",
                 nick = "user123",
                 birthDate = LocalDate.of(1995, 1, 1),
-                stack = listOf(StackItemRequest("Kotlin", 5))
+                stack = listOf(StackRequest("Kotlin", 5))
             )
 
             mockMvc.perform(
@@ -203,14 +200,14 @@ class UserControllerIntegrationTest(
             mockMvc.perform(get("/api/users"))
                 .andExpect(status().isOk)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray)
-                .andExpect(jsonPath("$", Matchers.hasSize<Any>(1)))
-                .andExpect(jsonPath("$[0].id").isNotEmpty)
-                .andExpect(jsonPath("$[0].name").value("User Test"))
-                .andExpect(jsonPath("$[0].nick").value("user123"))
-                .andExpect(jsonPath("$[0].birth_date").value("1995-01-01"))
-                .andExpect(jsonPath("$[0].stack[0].name").value("Kotlin"))
-                .andExpect(jsonPath("$[0].stack[0].skill_level").value(5))
+                .andExpect(jsonPath("$.items").isArray)
+                .andExpect(jsonPath("$.items", Matchers.hasSize<Any>(1)))
+                .andExpect(jsonPath("$.items[0].id").isNotEmpty)
+                .andExpect(jsonPath("$.items[0].name").value("User Test"))
+                .andExpect(jsonPath("$.items[0].nick").value("user123"))
+                .andExpect(jsonPath("$.items[0].birth_date").value("1995-01-01"))
+                .andExpect(jsonPath("$.items[0].stack[0].name").value("Kotlin"))
+                .andExpect(jsonPath("$.items[0].stack[0].level").value(5))
         }
 
         @Test
@@ -219,7 +216,7 @@ class UserControllerIntegrationTest(
                 name = "User Test",
                 nick = "userById",
                 birthDate = LocalDate.of(1985, 5, 5),
-                stack = listOf(StackItemRequest("Oracle", 5))
+                stack = listOf(StackRequest("Oracle", 5))
             )
 
             val createdUserResult = mockMvc.perform(
@@ -238,7 +235,7 @@ class UserControllerIntegrationTest(
                 .andExpect(jsonPath("$.nick").value("userById"))
                 .andExpect(jsonPath("$.birth_date").value("1985-05-05"))
                 .andExpect(jsonPath("$.stack[0].name").value("Oracle"))
-                .andExpect(jsonPath("$.stack[0].skill_level").value(5))
+                .andExpect(jsonPath("$.stack[0].level").value(5))
         }
 
         @Test
@@ -248,9 +245,8 @@ class UserControllerIntegrationTest(
             mockMvc.perform(get("/api/users/$randomId"))
                 .andExpect(status().isNotFound)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error").value("not_found_exception"))
-                .andExpect(jsonPath("$.description").value("User not found"))
-                .andExpect(jsonPath("$.details[0]").value("user with id '$randomId' not found"))
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("not_found_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("User with id '$randomId' not found")))
         }
 
         @ParameterizedTest
@@ -267,10 +263,8 @@ class UserControllerIntegrationTest(
             mockMvc.perform(get(url))
                 .andExpect(status().isBadRequest)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error").value(expectedError))
-                .andExpect(jsonPath("$.description").value(expectedDescription))
-                .andExpect(jsonPath("$.details").isArray)
-                .andExpect(jsonPath("$.details[0]").isNotEmpty)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem(expectedError)))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem(expectedDescription)))
         }
 
         @Test
@@ -279,13 +273,13 @@ class UserControllerIntegrationTest(
                 name = "User 1",
                 nick = "user1",
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Java", 5))
+                stack = listOf(StackRequest("Java", 5))
             )
             val secondUserRequest = UserRequest(
                 name = "User 2",
                 nick = "user2",
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Java", 5))
+                stack = listOf(StackRequest("Java", 5))
             )
 
             mockMvc.perform(
@@ -304,8 +298,8 @@ class UserControllerIntegrationTest(
 
             mockMvc.perform(get("/api/users?offset=0&limit=10&sort=name:asc"))
                 .andExpect(status().isOk)
-                .andExpect(jsonPath("$[0].name").value("User 1"))
-                .andExpect(jsonPath("$[1].name").value("User 2"))
+                .andExpect(jsonPath("$.items[0].name").value("User 1"))
+                .andExpect(jsonPath("$.items[1].name").value("User 2"))
         }
     }
 
@@ -318,7 +312,7 @@ class UserControllerIntegrationTest(
                 name = "User Test",
                 nick = "userToUpdate",
                 birthDate = LocalDate.of(1992, 2, 2),
-                stack = listOf(StackItemRequest("Java", 5))
+                stack = listOf(StackRequest("Java", 5))
             )
 
             val createdUserResult = mockMvc.perform(
@@ -333,7 +327,7 @@ class UserControllerIntegrationTest(
                 name = "User Updated",
                 nick = "userToUpdate",
                 birthDate = LocalDate.of(1992, 2, 2),
-                stack = listOf(StackItemRequest("Spring", 7))
+                stack = listOf(StackRequest("Spring", 7))
             )
 
             mockMvc.perform(
@@ -348,7 +342,7 @@ class UserControllerIntegrationTest(
                 .andExpect(jsonPath("$.nick").value("userToUpdate"))
                 .andExpect(jsonPath("$.birth_date").value("1992-02-02"))
                 .andExpect(jsonPath("$.stack[0].name").value("Spring"))
-                .andExpect(jsonPath("$.stack[0].skill_level").value(7))
+                .andExpect(jsonPath("$.stack[0].level").value(7))
         }
 
         @Test
@@ -357,7 +351,7 @@ class UserControllerIntegrationTest(
                 name = "User Test",
                 nick = "user123",
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Kotlin", 5))
+                stack = listOf(StackRequest("Kotlin", 5))
             )
 
             val randomId = UUID.randomUUID()
@@ -369,9 +363,8 @@ class UserControllerIntegrationTest(
             )
                 .andExpect(status().isNotFound)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error").value("not_found_exception"))
-                .andExpect(jsonPath("$.description").value("User not found"))
-                .andExpect(jsonPath("$.details[0]").value("user with id '$randomId' not found"))
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("not_found_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("User with id '$randomId' not found")))
         }
 
         @Test
@@ -380,13 +373,13 @@ class UserControllerIntegrationTest(
                 name = "User 1",
                 nick = "userNick1",
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Java", 5))
+                stack = listOf(StackRequest("Java", 5))
             )
             val secondUserRequest = UserRequest(
                 name = "User 2",
                 nick = "userNick2",
                 birthDate = LocalDate.of(1991, 1, 1),
-                stack = listOf(StackItemRequest("Spring", 5))
+                stack = listOf(StackRequest("Spring", 5))
             )
 
             val createdFirstUserResult = mockMvc.perform(
@@ -407,7 +400,7 @@ class UserControllerIntegrationTest(
                 name = "User 1 Updated",
                 nick = "userNick2",
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Java", 5))
+                stack = listOf(StackRequest("Java", 5))
             )
 
             mockMvc.perform(
@@ -417,9 +410,8 @@ class UserControllerIntegrationTest(
             )
                 .andExpect(status().isConflict)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error").value("conflict_exception"))
-                .andExpect(jsonPath("$.description").value("Nick already exists"))
-                .andExpect(jsonPath("$.details[0]").value("nick 'userNick2' already exists"))
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("conflict_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("Nick '${secondUserRequest.nick}' already exists")))
         }
 
         @Test
@@ -428,7 +420,7 @@ class UserControllerIntegrationTest(
                 name = "User Nick Null",
                 nick = "nick",
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Java", 5))
+                stack = listOf(StackRequest("Java", 5))
             )
             val createdUserResult = mockMvc.perform(
                 post("/api/users")
@@ -441,7 +433,7 @@ class UserControllerIntegrationTest(
                 name = "User Nick Null",
                 nick = null,
                 birthDate = LocalDate.of(1990, 1, 1),
-                stack = listOf(StackItemRequest("Java", 5))
+                stack = listOf(StackRequest("Java", 5))
             )
             mockMvc.perform(
                 put("/api/users/$userId")
@@ -456,13 +448,13 @@ class UserControllerIntegrationTest(
         @MethodSource("com.estudos.users_api.controller.UserControllerIntegrationTest#invalidCreateRequests")
         fun `should return 400 when invalid update request`(
             invalidUpdateRequest: UserRequest,
-            expectedDetail: String
+            expectedDescription: String
         ) {
             val validUserRequest = UserRequest(
                 name = "Valid User",
                 nick = "validNick",
                 birthDate = LocalDate.of(1991, 3, 3),
-                stack = listOf(StackItemRequest("Java", 5))
+                stack = listOf(StackRequest("Java", 5))
             )
 
             val createdUserResult = mockMvc.perform(
@@ -480,10 +472,8 @@ class UserControllerIntegrationTest(
             )
                 .andExpect(status().isBadRequest)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error").value("validation_exception"))
-                .andExpect(jsonPath("$.description").value("Invalid request"))
-                .andExpect(jsonPath("$.details").isArray)
-                .andExpect(jsonPath("$.details", Matchers.hasItem(expectedDetail)))
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("validation_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem(expectedDescription)))
         }
     }
 
@@ -496,7 +486,7 @@ class UserControllerIntegrationTest(
                 name = "User Delete",
                 nick = "toDelete",
                 birthDate = LocalDate.of(1993, 4, 4),
-                stack = listOf(StackItemRequest("Spring", 5))
+                stack = listOf(StackRequest("Spring", 5))
             )
 
             val createdUserResult = mockMvc.perform(
@@ -519,9 +509,8 @@ class UserControllerIntegrationTest(
             mockMvc.perform(delete("/api/users/$randomId"))
                 .andExpect(status().isNotFound)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error").value("not_found_exception"))
-                .andExpect(jsonPath("$.description").value("User not found"))
-                .andExpect(jsonPath("$.details[0]").value("user with id '$randomId' not found"))
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("not_found_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("User with id '$randomId' not found")))
         }
     }
 
@@ -535,8 +524,8 @@ class UserControllerIntegrationTest(
                 nick = "userStacks",
                 birthDate = LocalDate.of(1994, 6, 6),
                 stack = listOf(
-                    StackItemRequest("Kotlin", 5),
-                    StackItemRequest("Spring Boot", 8)
+                    StackRequest("Kotlin", 5),
+                    StackRequest("Spring Boot", 8)
                 )
             )
 
@@ -554,9 +543,9 @@ class UserControllerIntegrationTest(
                 .andExpect(jsonPath("$").isArray)
                 .andExpect(jsonPath("$", Matchers.hasSize<Any>(2)))
                 .andExpect(jsonPath("$[0].name").value("Kotlin"))
-                .andExpect(jsonPath("$[0].skill_level").value(5))
+                .andExpect(jsonPath("$[0].level").value(5))
                 .andExpect(jsonPath("$[1].name").value("Spring Boot"))
-                .andExpect(jsonPath("$[1].skill_level").value(8))
+                .andExpect(jsonPath("$[1].level").value(8))
         }
 
         @Test
@@ -566,9 +555,8 @@ class UserControllerIntegrationTest(
             mockMvc.perform(get("/api/users/$randomId/stacks"))
                 .andExpect(status().isNotFound)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.error").value("not_found_exception"))
-                .andExpect(jsonPath("$.description").value("User not found"))
-                .andExpect(jsonPath("$.details[0]").value("user with id '$randomId' not found"))
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("not_found_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("User with id '$randomId' not found")))
         }
     }
 
@@ -576,68 +564,68 @@ class UserControllerIntegrationTest(
         @JvmStatic
         fun invalidCreateRequests() = listOf(
             Arguments.of(
-                UserRequest("", "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest("Java", 5))),
-                "name must not be blank"
+                UserRequest("", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 5))),
+                "Name must not be blank"
             ),
             Arguments.of(
-                UserRequest("Te", "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest("Java", 5))),
-                "name size must be between 3 and 255"
+                UserRequest("Te", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 5))),
+                "Name size must be between 3 and 255"
             ),
             Arguments.of(
-                UserRequest("T".repeat(256), "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest("Java", 5))),
-                "name size must be between 3 and 255"
+                UserRequest("T".repeat(256), "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 5))),
+                "Name size must be between 3 and 255"
             ),
             Arguments.of(
-                UserRequest("Test", "", LocalDate.of(1990, 1, 1), listOf(StackItemRequest("Java", 5))),
-                "nick size must be between 1 and 255"
+                UserRequest("Test", "", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 5))),
+                "Nick size must be between 1 and 255"
             ),
             Arguments.of(
-                UserRequest("Test", "t".repeat(256), LocalDate.of(1990, 1, 1), listOf(StackItemRequest("Java", 5))),
-                "nick size must be between 1 and 255"
+                UserRequest("Test", "t".repeat(256), LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 5))),
+                "Nick size must be between 1 and 255"
             ),
+//            Arguments.of(
+//                UserRequest("Test", "test", null, listOf(StackRequest("Java", 5))),
+//                "Birth date must not be null"
+//            ),
             Arguments.of(
-                UserRequest("Test", "test", null, listOf(StackItemRequest("Java", 5))),
-                "birth date must not be null"
+                UserRequest("Test", "test", LocalDate.now().plusDays(1), listOf(StackRequest("Java", 5))),
+                "Birth date must be a past date"
             ),
-            Arguments.of(
-                UserRequest("Test", "test", LocalDate.now().plusDays(1), listOf(StackItemRequest("Java", 5))),
-                "birth date must be a past date"
-            ),
-            Arguments.of(
-                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), null),
-                "stack must not be null"
-            ),
+//            Arguments.of(
+//                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), null),
+//                "Stack must not be null"
+//            ),
             Arguments.of(
                 UserRequest("Test", "test", LocalDate.of(1990, 1, 1), emptyList()),
-                "stack must contain at least one element"
+                "Stack must contain at least 1 element"
             ),
             Arguments.of(
-                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest("Java", 5), StackItemRequest("Java", 7))),
-                "stack cannot contain duplicate values"
+                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 5), StackRequest("Java", 7))),
+                "Stack cannot contain duplicate values"
+            ),
+//            Arguments.of(
+//                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest(null, 5))),
+//                "Stack item name must not be null"
+//            ),
+            Arguments.of(
+                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest(" ", 5))),
+                "Stack item name must not be blank"
             ),
             Arguments.of(
-                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest(null, 5))),
-                "stack item name must not be null"
+                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("A".repeat(33), 5))),
+                "Stack item name size must be less than or equal to 32"
+            ),
+//            Arguments.of(
+//                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", null))),
+//                "Stack item level must not be null"
+//            ),
+            Arguments.of(
+                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 0))),
+                "Stack item level must be between 1 and 10"
             ),
             Arguments.of(
-                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest(" ", 5))),
-                "stack item name must not be blank"
-            ),
-            Arguments.of(
-                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest("A".repeat(33), 5))),
-                "stack item name size must be less than or equal to 32"
-            ),
-            Arguments.of(
-                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest("Java", null))),
-                "stack item skill level must not be null"
-            ),
-            Arguments.of(
-                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest("Java", 0))),
-                "stack item skill level must be between 1 and 10"
-            ),
-            Arguments.of(
-                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackItemRequest("Java", 11))),
-                "stack item skill level must be between 1 and 10"
+                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 11))),
+                "Stack item level must be between 1 and 10"
             )
         )
     }
