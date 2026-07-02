@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class UniqueStack(
-    val message: String = "stack cannot contain duplicate values",
+    val message: String = "Stack cannot contain duplicate values",
     val groups: Array<KClass<*>> = [],
     val payload: Array<KClass<out Payload>> = []
 )
