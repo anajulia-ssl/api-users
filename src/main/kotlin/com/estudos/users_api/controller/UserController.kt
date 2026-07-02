@@ -1,14 +1,15 @@
 package com.estudos.users_api.controller
 
-import com.estudos.users_api.dto.PageQuery
+import com.estudos.users_api.dto.pagination.PageQuery
+import com.estudos.users_api.dto.pagination.PageResponse
 import com.estudos.users_api.dto.pagination.Paginator
 import com.estudos.users_api.dto.StackResponse
 import com.estudos.users_api.dto.UserRequest
 import com.estudos.users_api.dto.UserResponse
-import com.estudos.users_api.dto.toEntity
-import com.estudos.users_api.dto.toPageable
+import com.estudos.users_api.dto.mapper.toEntity
+import com.estudos.users_api.dto.pagination.toPageable
+import com.estudos.users_api.dto.mapper.toResponse
 import com.estudos.users_api.model.User
-import com.estudos.users_api.model.toResponse
 import com.estudos.users_api.service.UserService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -28,11 +29,13 @@ class UserController(private val service: UserService) {
     }
 
     @GetMapping
-    fun findAll(@Valid query: PageQuery) =
-        Paginator.build(
-            query = query,
-            page = service.findAll(query.toPageable(User::class)),
-            mapper = { it.toResponse() }
+    fun findAll(query: PageQuery): ResponseEntity<PageResponse<UserResponse>> =
+        ResponseEntity.ok(
+            Paginator.build(
+                query = query,
+                page = service.findAll(query.toPageable(User::class)),
+                mapper = { it.toResponse() }
+            )
         )
 
 
@@ -45,11 +48,7 @@ class UserController(private val service: UserService) {
     @GetMapping("/{userId}/stacks")
     fun getUserStacks(@PathVariable userId: UUID): ResponseEntity<List<StackResponse>> {
         val stacks = service.getUserStacks(userId)
-        return if (stacks.isEmpty()) {
-            ResponseEntity.noContent().build()
-        } else {
-            ResponseEntity.ok(stacks)
-        }
+        return ResponseEntity.ok(stacks)
     }
 
     @PutMapping("/{id}")
