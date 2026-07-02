@@ -8,5 +8,5 @@ data class UserResponse(
     val name: String,
     val nick: String?,
     val birthDate: LocalDate,
-    var stack: List<StackResponse>
+    val stack: List<StackResponse>
 )
