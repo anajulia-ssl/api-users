@@ -1,7 +1,5 @@
 package com.estudos.users_api.dto
 
-import com.estudos.users_api.model.Stack
-import com.estudos.users_api.model.User
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import jakarta.validation.constraints.NotNull
@@ -17,10 +15,3 @@ data class StackRequest(
     @field:Range(min = 1, max = 10, message = "stack item level must be between 1 and 10")
     val level: Int
 )
-
-fun StackRequest.toEntity(user: User): Stack =
-    Stack(
-        name = this.name,
-        level = this.level,
-        user = user
-    )

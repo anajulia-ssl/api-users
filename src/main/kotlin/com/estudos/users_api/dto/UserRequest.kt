@@ -25,15 +25,3 @@ data class UserRequest(
     @field:Valid
     val stack: List<StackRequest>
 )
-
-fun UserRequest.toEntity(): User {
-    val user = User(
-        name = this.name,
-        nick = this.nick,
-        birthDate = this.birthDate
-    )
-    user.stack = this.stack.map {
-        it.toEntity(user)
-    }.toMutableList()
-    return user
-}
