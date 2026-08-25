@@ -118,7 +118,7 @@ curl -X POST http://localhost:8080/api/users \
   }'
 
 # Listar usuários paginado e ordenado
-curl "http://localhost:8080/api/users?page=0&size=10&sort=name&direction=ASC"
+curl "http://localhost:8080/api/users?page=0&size=10&sort=name:ASC"
 
 # Buscar por ID
 curl http://localhost:8080/api/users/{id}
