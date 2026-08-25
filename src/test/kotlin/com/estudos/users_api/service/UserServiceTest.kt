@@ -93,7 +93,7 @@ class UserServiceTest {
     @Test
     fun `should update user when exists`() {
         val existing = User(id = UUID.randomUUID(), name = "Test", nick = "test", birthDate = LocalDate.of(1991, 4, 12), stack = mutableListOf())
-        val updated = User(id = UUID.randomUUID(), name = "Test updated", nick = "test", birthDate = LocalDate.of(1991, 4, 12), stack = mutableListOf())
+        val updated = User(id = existing.id, name = "Test updated", nick = "test", birthDate = LocalDate.of(1991, 4, 12), stack = mutableListOf())
 
         `when`(userRepository.findById(existing.id!!)).thenReturn(Optional.of(existing))
         `when`(userRepository.findByNickExcludingId(updated.nick!!, existing.id)).thenReturn(null)

@@ -27,7 +27,7 @@ private fun <T : Any> getAliases(entityClass: KClass<T>): Map<String, String> =
     }.toMap()
 
 fun <T : Any> PageQuery.toPageable(entityClass: KClass<T>): Pageable {
-    if (offset < 0 || limit < 1 || limit > MAX_PAGE_LIMIT) {
+    if (offset < 0 || limit < 1 || limit > MAX_PAGE_LIMIT || offset % limit != 0) {
         throw InvalidPaginationException("Invalid pagination parameters")
     }
 
@@ -41,7 +41,7 @@ fun <T : Any> PageQuery.toPageable(entityClass: KClass<T>): Pageable {
 
     val orders = sort.split(",").map { item ->
         val parts = item.split(":", limit = 2)
-        // "sort=name" (sem direção) ou "sort=:asc" (sem campo) devem virar 400, não 500.
+
         if (parts.size != 2 || parts[0].isBlank() || parts[1].isBlank()) {
             throw InvalidSortException("Invalid sorting parameters")
         }
