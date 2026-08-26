@@ -47,6 +47,7 @@ class UserControllerIntegrationTest(
                     .content(objectMapper.writeValueAsString(userRequest))
             )
                 .andExpect(status().isCreated)
+                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.id").isNotEmpty)
                 .andExpect(jsonPath("$.name").value("User Test"))
                 .andExpect(jsonPath("$.nick").value("user123"))
@@ -70,6 +71,7 @@ class UserControllerIntegrationTest(
                     .content(objectMapper.writeValueAsString(userRequest))
             )
                 .andExpect(status().isCreated)
+                .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.id").isNotEmpty)
                 .andExpect(jsonPath("$.name").value("User Test"))
                 .andExpect(jsonPath("$.nick").doesNotExist())
@@ -99,12 +101,6 @@ class UserControllerIntegrationTest(
                     .content(objectMapper.writeValueAsString(firstUserRequest))
             )
                 .andExpect(status().isCreated)
-                .andExpect(jsonPath("$.id").isNotEmpty)
-                .andExpect(jsonPath("$.name").value("User 1"))
-                .andExpect(jsonPath("$.nick").value("duplicatedNick"))
-                .andExpect(jsonPath("$.birth_date").value("1990-01-01"))
-                .andExpect(jsonPath("$.stack[0].name").value("Spring"))
-                .andExpect(jsonPath("$.stack[0].level").value(5))
 
             mockMvc.perform(
                 post("/api/users")
@@ -113,7 +109,7 @@ class UserControllerIntegrationTest(
             )
                 .andExpect(status().isConflict)
                 .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("conflict_exception")))
-            .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("Nick '${duplicateNickRequest.nick}' already exists")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("Nick '${duplicateNickRequest.nick}' already exists")))
         }
 
         @ParameterizedTest
@@ -560,6 +556,208 @@ class UserControllerIntegrationTest(
         }
     }
 
+    @Nested
+    inner class NullFieldTests {
+
+        @Test
+        fun `should return 400 when birth date is null`() {
+            val json = """
+                {
+                    "name": "Test",
+                    "nick": "test",
+                    "birth_date": null,
+                    "stack": [{ "name": "Java", "level": 5 }]
+                }
+            """.trimIndent()
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("There is a required field that cannot be null")))
+        }
+
+        @Test
+        fun `should return 400 when stack is null`() {
+            val json = """
+                {
+                    "name": "Test",
+                    "nick": "test",
+                    "birth_date": "1990-01-01",
+                    "stack": null
+                }
+            """.trimIndent()
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("There is a required field that cannot be null")))
+        }
+
+        @Test
+        fun `should return 400 when stack item name is null`() {
+            val json = """
+                {
+                    "name": "Test",
+                    "nick": "test",
+                    "birth_date": "1990-01-01",
+                    "stack": [{ "name": null, "level": 5 }]
+                }
+            """.trimIndent()
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("There is a required field that cannot be null")))
+        }
+
+        @Test
+        fun `should return 400 when stack item level is null`() {
+            val json = """
+                {
+                    "name": "Test",
+                    "nick": "test",
+                    "birth_date": "1990-01-01",
+                    "stack": [{ "name": "Java", "level": null }]
+                }
+            """.trimIndent()
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("There is a required field that cannot be null")))
+        }
+
+        @Test
+        fun `should return 400 when name is null`() {
+            val json = """
+                {
+                    "name": null,
+                    "nick": "test",
+                    "birth_date": "1990-01-01",
+                    "stack": [{ "name": "Java", "level": 5 }]
+                }
+            """.trimIndent()
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("There is a required field that cannot be null")))
+        }
+
+        @Test
+        fun `should return 400 when birth date field is missing`() {
+            val json = """
+                {
+                    "name": "Test",
+                    "nick": "test",
+                    "stack": [{ "name": "Java", "level": 5 }]
+                }
+            """.trimIndent()
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("There is a required field that cannot be null")))
+        }
+
+        @Test
+        fun `should return 400 when stack field is missing`() {
+            val json = """
+                {
+                    "name": "Test",
+                    "nick": "test",
+                    "birth_date": "1990-01-01"
+                }
+            """.trimIndent()
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+                .andExpect(jsonPath("$[*].description").value(Matchers.hasItem("There is a required field that cannot be null")))
+        }
+
+        @Test
+        fun `should return 400 when request body is malformed json`() {
+            val json = """{ "name": "Test", invalid }"""
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+        }
+
+        @Test
+        fun `should return 400 when field has invalid type`() {
+            val json = """
+                {
+                    "name": "Test",
+                    "nick": "test",
+                    "birth_date": "not-a-date",
+                    "stack": [{ "name": "Java", "level": 5 }]
+                }
+            """.trimIndent()
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+        }
+
+        @Test
+        fun `should return 400 when stack level has invalid type`() {
+            val json = """
+                {
+                    "name": "Test",
+                    "nick": "test",
+                    "birth_date": "1990-01-01",
+                    "stack": [{ "name": "Java", "level": "cinco" }]
+                }
+            """.trimIndent()
+
+            mockMvc.perform(
+                post("/api/users")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(json)
+            )
+                .andExpect(status().isBadRequest)
+                .andExpect(jsonPath("$[*].error").value(Matchers.hasItem("parameter_exception")))
+        }
+    }
+
     companion object {
         @JvmStatic
         fun invalidCreateRequests() = listOf(
@@ -583,18 +781,10 @@ class UserControllerIntegrationTest(
                 UserRequest("Test", "t".repeat(256), LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 5))),
                 "Nick size must be between 1 and 255"
             ),
-//            Arguments.of(
-//                UserRequest("Test", "test", null, listOf(StackRequest("Java", 5))),
-//                "Birth date must not be null"
-//            ),
             Arguments.of(
                 UserRequest("Test", "test", LocalDate.now().plusDays(1), listOf(StackRequest("Java", 5))),
                 "Birth date must be a past date"
             ),
-//            Arguments.of(
-//                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), null),
-//                "Stack must not be null"
-//            ),
             Arguments.of(
                 UserRequest("Test", "test", LocalDate.of(1990, 1, 1), emptyList()),
                 "Stack must contain at least 1 element"
@@ -603,10 +793,6 @@ class UserControllerIntegrationTest(
                 UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 5), StackRequest("Java", 7))),
                 "Stack cannot contain duplicate values"
             ),
-//            Arguments.of(
-//                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest(null, 5))),
-//                "Stack item name must not be null"
-//            ),
             Arguments.of(
                 UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest(" ", 5))),
                 "Stack item name must not be blank"
@@ -615,10 +801,6 @@ class UserControllerIntegrationTest(
                 UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("A".repeat(33), 5))),
                 "Stack item name size must be less than or equal to 32"
             ),
-//            Arguments.of(
-//                UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", null))),
-//                "Stack item level must not be null"
-//            ),
             Arguments.of(
                 UserRequest("Test", "test", LocalDate.of(1990, 1, 1), listOf(StackRequest("Java", 0))),
                 "Stack item level must be between 1 and 10"
