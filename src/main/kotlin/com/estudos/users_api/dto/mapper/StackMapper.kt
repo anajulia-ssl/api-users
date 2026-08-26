@@ -1,6 +1,8 @@
 package com.estudos.users_api.dto.mapper
 
 import com.estudos.users_api.dto.StackRequest
+import com.estudos.users_api.dto.StackResponse
+import com.estudos.users_api.dto.UserResponse
 import com.estudos.users_api.model.Stack
 import com.estudos.users_api.model.User
 
@@ -9,4 +11,11 @@ fun StackRequest.toEntity(user: User): Stack =
         name = this.name,
         level = this.level,
         user = user
+    )
+
+fun Stack.toResponse(): StackResponse =
+    StackResponse(
+        id = this.id,
+        name = this.name,
+        level = this.level
     )

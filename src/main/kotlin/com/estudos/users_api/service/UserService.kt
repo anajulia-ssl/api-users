@@ -44,12 +44,12 @@ class UserService(
         }
     }
 
-    fun getUserStacks(userId: UUID): List<StackResponse> {
+    fun getUserStacks(userId: UUID): List<Stack> {
         val user = userRepository.findById(userId).orElseThrow {
             UserNotFoundException(userId)
         }
 
-        return user.stack.map { StackResponse(id = it.id, name = it.name, level = it.level) }
+        return user.stack
     }
 
     // UPDATE

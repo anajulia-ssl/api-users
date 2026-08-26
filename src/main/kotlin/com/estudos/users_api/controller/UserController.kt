@@ -15,6 +15,7 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import java.net.URI
 import java.util.UUID
 
 @RestController
@@ -25,7 +26,8 @@ class UserController(private val service: UserService) {
     fun create(@Valid @RequestBody request: UserRequest): ResponseEntity<UserResponse> {
         val entity = request.toEntity()
         val saved = service.create(entity)
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved.toResponse())
+        val location = URI.create("/api/users/${saved.id}")
+        return ResponseEntity.created(location).body(saved.toResponse())
     }
 
     @GetMapping
@@ -48,7 +50,7 @@ class UserController(private val service: UserService) {
     @GetMapping("/{userId}/stacks")
     fun getUserStacks(@PathVariable userId: UUID): ResponseEntity<List<StackResponse>> {
         val stacks = service.getUserStacks(userId)
-        return ResponseEntity.ok(stacks)
+        return ResponseEntity.ok(stacks.map { it.toResponse() })
     }
 
     @PutMapping("/{id}")
