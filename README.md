@@ -82,10 +82,12 @@ Todos os recursos estão sob o prefixo `/api/users`.
 
 Parâmetros de paginação suportados em `GET /api/users`:
 
-- `page` — índice da página (base zero)
-- `size` — quantidade de elementos por página
-- `sort` — campo de ordenação (limitado aos campos anotados com `@Sortable`)
-- `direction` — `ASC` ou `DESC`
+- `offset` — posição inicial dos registros (deve ser múltiplo de `limit`, padrão 0)
+- `limit` — quantidade de elementos por página (mínimo 1, máximo 100, padrão 20)
+- `sort` — ordenação no formato `campo:direcao`, separados por vírgula para múltiplos campos
+
+Campos disponíveis para ordenação: `name`, `nick`, `birth_date`.
+Direções: `asc`, `desc`.
 
 ### Exemplo de payload
 
@@ -118,7 +120,7 @@ curl -X POST http://localhost:8080/api/users \
   }'
 
 # Listar usuários paginado e ordenado
-curl "http://localhost:8080/api/users?page=0&size=10&sort=name:ASC"
+curl "http://localhost:8080/api/users?offset=0&limit=10&sort=name:asc"
 
 # Buscar por ID
 curl http://localhost:8080/api/users/{id}
