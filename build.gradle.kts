@@ -8,7 +8,7 @@ plugins {
 
 group = "com.estudos"
 version = "0.0.1-SNAPSHOT"
-description = "Demo project for Spring Boot"
+description = "API REST de cadastro de usuários e stacks tecnológicas"
 
 java {
 	toolchain {
